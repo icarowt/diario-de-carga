@@ -1,0 +1,166 @@
+{% extends 'base.html' %}
+{% block title %}{{ exercicio.nome }} - Registrar Treino{% endblock %}
+{% block content %}
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<div class="row">
+    <div class="col-md-10 mx-auto">
+
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h1 class="h3">{{ exercicio.nome }}</h1>
+            <a href="{{ url_for('pagina_detalhe_ficha', ficha_id=exercicio.ficha_id) }}" class="btn btn-secondary">
+                &larr; Voltar para a Ficha
+            </a>
+        </div>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            {% for category, message in messages %}
+              <div class="alert alert-{{ category }} shadow-sm" role="alert">
+                {{ message }}
+              </div>
+            {% endfor %}
+          {% endif %}
+        {% endwith %}
+
+        {% if progresso_info %}
+            <div class="alert alert-secondary shadow-sm">
+                <h4 class="alert-heading">Progresso de Carga (vs. último treino):</h4>
+                <hr>
+                {% if progresso_info.percentual > 0 %}
+                    <strong class="h3 text-success">+{{ progresso_info.percentual }}%</strong>
+                    (Aumento de {{ progresso_info.diferenca }} kg)
+                {% elif progresso_info.percentual < 0 %}
+                     <strong class="h3 text-danger">{{ progresso_info.percentual }}%</strong>
+                    (Redução de {{ progresso_info.diferenca * -1 }} kg)
+                {% else %}
+                    <strong class="h3">0%</strong> (Carga mantida)
+                {% endif %}
+            </div>
+        {% endif %}
+
+        <div class="row g-4">
+            <div class="col-lg-5">
+                <div class="card shadow-sm mb-4">
+                    <div class="card-header"><h4 class="h5 mb-0">Registrar novo treino</h4></div>
+                    <div class="card-body">
+                        <form method="POST">
+                            <div class="mb-3">
+                                <label for="peso" class="form-label">Peso (kg):</label>
+                                <input type="number" step="0.5" id="peso" name="peso" class="form-control" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="reps" class="form-label">Repetições:</label>
+                                <input type="number" id="reps" name="reps" class="form-control" required>
+                            </div>
+                            <div class="d-grid">
+                                <button type="submit" class="btn btn-primary btn-lg">Salvar Registro</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <div class="card shadow-sm">
+                    <div class="card-header"><h4 class="h5 mb-0">Histórico de Registros</h4></div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover table-striped mb-0">
+                                <thead>
+                                    <tr>
+                                        <th>Data</th> <th>Peso</th> <th>Reps</th> <th>Ação</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for reg in registros %}
+                                    <tr>
+                                        <td>{{ reg.data_registro.strftime('%d/%m/%y') }}</td>
+                                        <td>{{ reg.peso_kg }} kg</td>
+                                        <td>{{ reg.repeticoes }}</td>
+                                        <td>
+                                            <form action="{{ url_for('deletar_registro') }}" method="POST" style="margin:0;">
+                                                <input type="hidden" name="registro_id" value="{{ reg.id }}">
+                                                <input type="hidden" name="ficha_exercicio_id" value="{{ ficha_exercicio_id }}">
+                                                <button type="submit" class="btn btn-outline-danger btn-sm"
+                                                        onclick="return confirm('Tem certeza que deseja deletar este registro?');">
+                                                    &times;
+                                                </button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                    {% else %}
+                                    <tr>
+                                        <td colspan="4" class="text-center p-3">Nenhum registro encontrado.</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-7">
+                <div class="card shadow-sm">
+                    <div class="card-header"><h4 class="h5 mb-0">Relação Peso (kg) vs. Repetições</h4></div>
+                    <div class="card-body">
+                        <canvas id="graficoDispersao"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const scatterData = {{ scatter_data | tojson }};
+    const ctx = document.getElementById('graficoDispersao').getContext('2d');
+    const corGrafico = 'rgba(230, 230, 230, 1)';
+    const corGraficoFundo = 'rgba(230, 230, 230, 0.7)';
+    const corEixos = '#ccc';
+    const corTicks = '#aaa';
+    const corGrelha = 'rgba(255, 255, 255, 0.1)';
+    const myChart = new Chart(ctx, {
+        type: 'scatter',
+        data: {
+            datasets: [{
+                label: 'Registros de Treino',
+                data: scatterData,
+                backgroundColor: corGraficoFundo,
+                borderColor: corGrafico,
+                pointRadius: 6
+            }]
+        },
+        options: {
+            plugins: {
+                legend: { labels: { color: corEixos } },
+                tooltip: {
+                    callbacks: {
+                        label: function(tooltipItem) {
+                            const dataPonto = tooltipItem.raw;
+                            const labelData = `Data: ${dataPonto.t}`;
+                            const labelKg = `Peso: ${dataPonto.y} kg`;
+                            const labelReps = `Reps: ${dataPonto.x}`;
+                            return [labelData, labelKg, labelReps];
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    title: { display: true, text: 'Repetições', color: corEixos },
+                    ticks: { stepSize: 1, precision: 0, color: corTicks },
+                    grid: { color: corGrelha }
+                },
+                y: {
+                    title: { display: true, text: 'Peso (kg)', color: corEixos },
+                    beginAtZero: false,
+                    ticks: { color: corTicks },
+                    grid: { color: corGrelha }
+                }
+            }
+        }
+    });
+</script>
+
+{% endblock %}

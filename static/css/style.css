@@ -1,0 +1,63 @@
+/* 1. Importar a fonte "Gochi Hand" */
+/* MUDANÇA: Trocámos a 'Bebas Neue' por esta */
+@import url('https://fonts.googleapis.com/css2?family=Gochi+Hand&display=swap');
+
+/* 2. Aplicar a fonte "Giz" */
+h1, h2, h3, h4, h5, h6, .navbar-brand {
+    /* MUDANÇA: Trocámos a 'Bebas Neue' pela 'Gochi Hand' */
+    font-family: 'Gochi Hand', cursive;
+
+    /* MUDANÇA: Removemos o 'uppercase' e o 'letter-spacing'
+       porque esta fonte fica melhor ao natural.
+    */
+}
+
+/* 3. Ajuste fino na Navbar (tamanho da fonte) */
+.navbar-brand {
+    font-size: 2.25rem; /* Aumentei um pouco, 'Gochi Hand' é mais fina */
+}
+
+/* 4. Mudar os botões de ação para Monocromático */
+/* (Isto fica igual, o nosso tema de botões brancos está bom) */
+.btn-primary,
+.btn-success {
+    --bs-btn-color: #000;
+    --bs-btn-bg: #f8f9fa;
+    --bs-btn-border-color: #f8f9fa;
+    --bs-btn-hover-color: #000;
+    --bs-btn-hover-bg: #d3d4d5;
+    --bs-btn-hover-border-color: #c6c7c8;
+    --bs-btn-active-color: #000;
+    --bs-btn-active-bg: #c6c7c8;
+    --bs-btn-active-border-color: #babbbc;
+
+    font-weight: bold;
+    /* Adicionei a fonte 'Gochi Hand' aos botões principais */
+    font-family: 'Gochi Hand', cursive;
+    font-size: 1.25rem;
+}
+
+/* 5. Links (Isto fica igual) */
+[data-bs-theme="dark"] a {
+    color: #adb5bd; /* Um cinza claro padrão */
+}
+[data-bs-theme="dark"] a:hover {
+    color: #f8f9fa; /* Branco ao passar o mouse */
+}
+
+/* 6. Abas da Biblioteca */
+/* (Também vamos usar a fonte de giz aqui) */
+.nav-tabs .nav-link {
+    /* MUDANÇA: Trocámos a 'Bebas Neue' pela 'Gochi Hand' */
+    font-family: 'Gochi Hand', cursive;
+    font-size: 1.3rem; /* Um pouco maior */
+    color: #adb5bd; /* Cor de aba inativa (cinza) */
+
+    /* MUDANÇA: Removemos o 'uppercase' */
+}
+
+/* A aba ATIVA (Isto fica igual) */
+.nav-tabs .nav-link.active {
+    color: #f8f9fa; /* Branco */
+    border-bottom-color: #f8f9fa; /* Linha inferior branca */
+}

@@ -1,0 +1,50 @@
+{% extends 'base.html' %}
+
+{% block title %}Criar Ficha{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-6 mx-auto">
+        <div class="card shadow-sm">
+            <div class="card-header p-3">
+                <h2 class="h4 mb-0">Criar Nova Ficha de Treino</h2>
+            </div>
+            <div class="card-body p-4">
+
+                <form method="POST">
+                    <div class="mb-3">
+                        <label for="nome_ficha" class="form-label">Nome da Ficha:</label>
+                        <input type="text" id="nome_ficha" name="nome_ficha"
+                               class="form-control"
+                               placeholder="Ex: Peito, Tríceps e Ombro" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="dia_semana" class="form-label">Dia da Semana:</label>
+                        <select id="dia_semana" name="dia_semana" class="form-select" required>
+                            <option value="" disabled selected>Escolha um dia...</option>
+                            <option value="Seg">Segunda-feira</option>
+                            <option value="Ter">Terça-feira</option>
+                            <option value="Qua">Quarta-feira</option>
+                            <option value="Qui">Quinta-feira</option>
+                            <option value="Sex">Sexta-feira</option>
+                            <option value="Sab">Sábado</option>
+                            <option value="Dom">Domingo</option>
+                        </select>
+                    </div>
+
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end mt-4">
+                        <a href="{{ url_for('pagina_dashboard') }}" class="btn btn-secondary">
+                            Cancelar
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            Salvar Ficha
+                        </button>
+                    </div>
+                </form>
+
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

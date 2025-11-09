@@ -1,0 +1,52 @@
+{% extends 'base.html' %}
+{% block title %}Meu Dashboard{% endblock %}
+{% block content %}
+<div class="row">
+    <div class="col-md-10 mx-auto">
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            {% for category, message in messages %}
+              <div class="alert alert-{{ category }} shadow-sm" role="alert">
+                {{ message }}
+              </div>
+            {% endfor %}
+          {% endif %}
+        {% endwith %}
+
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h1 class="h3">Minhas Fichas de Treino</h1>
+            <a href="{{ url_for('pagina_criar_ficha') }}" class="btn btn-primary">
+                + Criar Nova Ficha
+            </a>
+        </div>
+
+        <div class="list-group">
+            {% for ficha in fichas %}
+                <a href="{{ url_for('pagina_detalhe_ficha', ficha_id=ficha.id) }}"
+                   class="list-group-item list-group-item-action p-3 mb-3 rounded shadow-sm">
+
+                    <div class="d-flex w-100 justify-content-between">
+                        <h4 class="mb-1">{{ ficha.nome_ficha }}</h4>
+                        <span class="badge bg-secondary rounded-pill p-2">
+                            {{ ficha.dia_semana }}
+                        </span>
+                    </div>
+                    <p class="mb-1 text-body-secondary">
+                        {{ ficha.total_exercicios }} exercícios • 0 Min • 0 kcal
+                    </p>
+                </a>
+            {% else %}
+                <div class="card card-body text-center p-4">
+                    <h4 class="h5">Nenhuma ficha de treino encontrada.</h4>
+                    <p class="text-body-secondary">Comece por criar a sua primeira ficha.</p>
+                    <a href="{{ url_for('pagina_criar_ficha') }}"
+                       class="btn btn-primary mt-2 mx-auto">
+                        + Criar Nova Ficha
+                    </a>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}

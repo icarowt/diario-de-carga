@@ -1,0 +1,76 @@
+{% extends 'base.html' %}
+{% block title %}{{ ficha.nome_ficha }}{% endblock %}
+{% block content %}
+<div class="row">
+    <div class="col-md-10 mx-auto">
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            {% for category, message in messages %}
+              <div class="alert alert-{{ category }} shadow-sm" role="alert">
+                {{ message }}
+              </div>
+            {% endfor %}
+          {% endif %}
+        {% endwith %}
+
+        <div class="card shadow-sm">
+            <div class="card-header p-3">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h2 class="h4 mb-0">{{ ficha.nome_ficha }}</h2>
+                        <small class="text-body-secondary">Dia: {{ ficha.dia_semana }}</small>
+                    </div>
+                    <a href="{{ url_for('pagina_dashboard') }}" class="btn btn-secondary">
+                        &larr; Voltar ao Dashboard
+                    </a>
+                </div>
+            </div>
+
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h3 class="h5">Exercícios na Ficha</h3>
+                    <a href="{{ url_for('pagina_adicionar_exercicio_ficha', ficha_id=ficha.id) }}"
+                       class="btn btn-primary">
+                        + Adicionar Exercício
+                    </a>
+                </div>
+
+                <ul class="list-group list-group-flush">
+                    {% for ex in exercicios %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <div>
+                                <strong class="h5">{{ ex.nome }}</strong> <br>
+                                <small class="text-body-secondary">({{ ex.grupo_muscular }})</small>
+                            </div>
+
+                            <div class="d-flex gap-2">
+                                <a href="{{ url_for('pagina_registrar_treino', ficha_exercicio_id=ex.ficha_exercicio_id) }}"
+                                   class="btn btn-light btn-sm"> Registrar Treino
+                                </a>
+
+                                <form action="{{ url_for('remover_exercicio_da_ficha') }}" method="POST" style="margin:0;">
+                                    <input type="hidden" name="ficha_exercicio_id" value="{{ ex.ficha_exercicio_id }}">
+                                    <input type="hidden" name="ficha_id" value="{{ ficha.id }}">
+                                    <button type="submit" class="btn btn-outline-danger btn-sm"
+                                            onclick="return confirm('Tem certeza que deseja remover este exercício da ficha?\n\nTodo o histórico de treino será apagado.');">
+                                        Remover
+                                    </button>
+                                </form>
+                            </div>
+                        </li>
+                    {% else %}
+                        <li class="list-group-item text-center p-3">
+                            Nenhum exercício nesta ficha.
+                            <a href="{{ url_for('pagina_adicionar_exercicio_ficha', ficha_id=ficha.id) }}">
+                                Adicione da biblioteca.
+                            </a>
+                        </li>
+                    {% endfor %}
+                </ul>
+
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
