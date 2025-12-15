@@ -1,0 +1,1102 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Diário de Carga</title>
+    <!-- Carrega o Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Carrega a biblioteca Chart.js para o gráfico de progresso -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <!-- Ícones Lucide -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <!-- Configuração do Tailwind -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'primary-dark': '#09090b', // Preto profundo (Fundo)
+                        'secondary-dark': '#18181b', // Cinza muito escuro (Cards)
+                        'accent': '#f97316', // Laranja (Principal)
+                        'accent-hover': '#ea580c', // Laranja escuro (Hover)
+                        'warn': '#eab308', // Amarelo (Avisos)
+                        'success': '#22c55e', // Verde (Sucesso/Conclusão)
+                        'danger': '#ef4444', // Vermelho (Erro/Perigo)
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap');
+        
+        body {
+            background-color: #09090b;
+            color: #fafafa;
+            font-family: 'Inter', sans-serif;
+        }
+
+        /* --- ESTILOS DE AUTENTICAÇÃO DESLIZANTE (RESTAURADO) --- */
+        .auth-container {
+            background-color: #18181b;
+            border-radius: 20px;
+            box-shadow: 0 14px 28px rgba(0,0,0,0.5), 0 10px 10px rgba(0,0,0,0.4);
+            position: relative;
+            overflow: hidden;
+            width: 850px;
+            max-width: 100%;
+            min-height: 550px;
+            border: 1px solid #27272a;
+        }
+
+        .form-container {
+            position: absolute;
+            top: 0;
+            height: 100%;
+            transition: all 0.6s ease-in-out;
+            padding: 0 50px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+        }
+
+        .sign-in-container { left: 0; width: 50%; z-index: 2; }
+        .sign-up-container { left: 0; width: 50%; opacity: 0; z-index: 1; }
+
+        .auth-container.right-panel-active .sign-in-container { transform: translateX(100%); opacity: 0; }
+        .auth-container.right-panel-active .sign-up-container { transform: translateX(100%); opacity: 1; z-index: 5; animation: show 0.6s; }
+
+        @keyframes show { 0%, 49.99% { opacity: 0; z-index: 1; } 50%, 100% { opacity: 1; z-index: 5; } }
+
+        .overlay-container {
+            position: absolute; top: 0; left: 50%; width: 50%; height: 100%; overflow: hidden;
+            transition: transform 0.6s ease-in-out; z-index: 100;
+        }
+        .auth-container.right-panel-active .overlay-container { transform: translateX(-100%); }
+
+        .overlay {
+            /* Gradiente Laranja para Preto */
+            background: linear-gradient(to right, #ea580c, #f97316);
+            color: #FFFFFF; position: relative; left: -100%; height: 100%; width: 200%;
+            transform: translateX(0); transition: transform 0.6s ease-in-out;
+        }
+        .auth-container.right-panel-active .overlay { transform: translateX(50%); }
+
+        .overlay-panel {
+            position: absolute; display: flex; align-items: center; justify-content: center;
+            flex-direction: column; padding: 0 40px; text-align: center; top: 0; height: 100%; width: 50%;
+            transform: translateX(0); transition: transform 0.6s ease-in-out;
+        }
+        .overlay-left { transform: translateX(-20%); }
+        .auth-container.right-panel-active .overlay-left { transform: translateX(0); }
+        .overlay-right { right: 0; transform: translateX(0); }
+        .auth-container.right-panel-active .overlay-right { transform: translateX(20%); }
+
+        /* Responsive Auth for Mobile */
+        @media (max-width: 768px) {
+            .auth-container { width: 100%; min-height: auto; height: auto; flex-direction: column; overflow: visible; padding-bottom: 20px; }
+            .form-container { position: static; width: 100%; height: auto; padding: 30px; opacity: 1; transform: none !important; }
+            .sign-up-container { display: none; } .sign-in-container { display: flex; }
+            .overlay-container { display: none; }
+            .mobile-toggle { display: block; margin-top: 20px; color: #f97316; cursor: pointer; font-size: 0.9rem; }
+        }
+        @media (min-width: 769px) { .mobile-toggle { display: none; } }
+
+        /* --- OUTROS ESTILOS --- */
+        
+        /* Inputs & Buttons */
+        .custom-input {
+            background-color: #27272a; border: 1px solid #3f3f46; padding: 12px 15px; margin: 8px 0;
+            width: 100%; border-radius: 8px; color: white; outline: none; transition: all 0.3s ease;
+        }
+        .custom-input:focus { border-color: #f97316; box-shadow: 0 0 0 2px rgba(249, 115, 22, 0.2); }
+
+        .ghost-btn {
+            background-color: transparent; border: 1px solid white; color: white; padding: 12px 45px;
+            border-radius: 20px; font-weight: bold; letter-spacing: 1px; text-transform: uppercase;
+            transition: transform 80ms ease-in; cursor: pointer; margin-top: 15px;
+        }
+        .ghost-btn:active { transform: scale(0.95); }
+
+        .action-btn {
+            background-color: #f97316; color: white; border: none; padding: 12px 45px; border-radius: 20px;
+            font-weight: bold; letter-spacing: 1px; text-transform: uppercase; transition: transform 80ms ease-in;
+            cursor: pointer; margin-top: 15px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3); width: 100%;
+        }
+        .action-btn:active { transform: scale(0.95); }
+        .action-btn:hover { background-color: #ea580c; }
+
+        /* Utilities */
+        .view { animation: fadeIn 0.4s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        #rest-timer-overlay.timer-visible { transform: translateY(0); }
+        
+        /* Bi-set Connector Styles */
+        .biset-connector {
+            position: absolute; left: 20px; bottom: -24px; width: 4px; height: 24px;
+            background: #f97316; z-index: 0;
+        }
+        .biset-card {
+            border-left: 4px solid #f97316;
+        }
+        
+        /* Calendar Grid Styles - COMPACTO */
+        .calendar-month-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 2px;
+            font-size: 0.75rem;
+        }
+        .calendar-day {
+            aspect-ratio: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 4px;
+            color: #71717a;
+            cursor: default;
+            background-color: rgba(39, 39, 42, 0.5);
+            transition: all 0.2s;
+        }
+        .calendar-day:not(.empty):hover {
+            background-color: rgba(63, 63, 70, 0.8);
+        }
+        .calendar-day.active {
+            background-color: #22c55e; /* Mantendo verde para 'feito' */
+            color: #09090b;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 0 8px rgba(34, 197, 94, 0.4);
+        }
+        .calendar-day.active:hover {
+            transform: scale(1.1);
+            background-color: #16a34a;
+        }
+        .calendar-day-header {
+            text-align: center;
+            color: #a1a1aa;
+            font-weight: bold;
+            margin-bottom: 2px;
+            text-transform: uppercase;
+            font-size: 0.6rem;
+        }
+        
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #18181b; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #3f3f46; border-radius: 3px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #52525b; }
+
+        /* Modal Styles */
+        #summary-modal {
+            background-color: rgba(9, 9, 11, 0.95);
+            backdrop-filter: blur(4px);
+        }
+
+        /* --- ANIMAÇÃO DO PERSONAGEM DO TIMER --- */
+        @keyframes float-run {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-4px); }
+        }
+        .timer-character-anim {
+            animation: float-run 0.6s infinite ease-in-out;
+        }
+    </style>
+</head>
+<body class="flex flex-col min-h-screen pb-20">
+
+    <!-- Header -->
+    <header class="bg-secondary-dark p-4 shadow-md z-20 border-b border-zinc-800 fixed w-full top-0">
+        <div class="container mx-auto flex justify-between items-center">
+            <h1 class="text-xl font-extrabold text-accent flex items-center gap-2 cursor-pointer uppercase tracking-tight" onclick="showView('dashboard')">
+                <i data-lucide="dumbbell" class="text-accent"></i> Diário de Carga
+            </h1>
+            
+            <nav id="nav-user-area" class="hidden flex items-center gap-4">
+                <!-- Workout Timer Display -->
+                <div id="workout-timer-container" class="hidden items-center gap-2 bg-zinc-800 px-3 py-1 rounded-full border border-zinc-700">
+                    <div class="w-2 h-2 rounded-full bg-accent animate-pulse"></div>
+                    <span id="workout-timer-display" class="font-mono text-sm text-white">00:00</span>
+                    <button onclick="stopWorkoutSession()" class="text-xs text-red-400 hover:text-white ml-1"><i data-lucide="square" size="12"></i></button>
+                </div>
+
+                <div class="h-4 w-px bg-zinc-700 hidden sm:block"></div>
+                
+                <span class="text-zinc-400 text-sm hidden sm:inline">Olá, <span id="user-name-display" class="text-white font-semibold"></span></span>
+                <button id="nav-logout" class="text-xs px-3 py-1 rounded-full border border-danger text-danger hover:bg-danger hover:text-white transition flex items-center gap-1">
+                    <i data-lucide="log-out" size="12"></i>
+                </button>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Contentor Principal -->
+    <main class="flex-grow flex items-center justify-center p-4 pt-24 w-full max-w-6xl mx-auto">
+        
+        <!-- Toast Messages -->
+        <div id="message-container" class="fixed top-20 right-5 z-50 pointer-events-none"></div>
+
+        <!-- ============================================================== -->
+        <!-- VIEW: AUTENTICAÇÃO (SLIDING ANIMATION RESTAURADA)             -->
+        <!-- ============================================================== -->
+        <section id="view-auth" class="view block w-full flex justify-center">
+            <div class="auth-container" id="container">
+                
+                <!-- Cadastro -->
+                <div class="form-container sign-up-container">
+                    <form id="cadastro-form" class="w-full">
+                        <h1 class="text-2xl font-bold text-white mb-4">Criar Conta</h1>
+                        <div class="flex gap-4 mb-4">
+                            <a href="#" class="w-10 h-10 rounded-full border border-zinc-700 flex items-center justify-center text-zinc-400 hover:bg-zinc-700 hover:text-white transition"><i data-lucide="facebook" size="18"></i></a>
+                            <a href="#" class="w-10 h-10 rounded-full border border-zinc-700 flex items-center justify-center text-zinc-400 hover:bg-zinc-700 hover:text-white transition"><i data-lucide="google" size="18"></i></a>
+                        </div>
+                        <span class="text-xs text-zinc-500 mb-4">ou use seu email para registro</span>
+                        <input type="text" id="cadastro-nome" placeholder="Nome" class="custom-input" required />
+                        <input type="email" id="cadastro-email" placeholder="Email" class="custom-input" required />
+                        <input type="password" id="cadastro-senha" placeholder="Senha" class="custom-input" required />
+                        <button type="submit" class="action-btn">Cadastrar</button>
+                        <p class="mobile-toggle" onclick="toggleMobileAuth()">Já tem conta? Entrar</p>
+                    </form>
+                </div>
+
+                <!-- Login -->
+                <div class="form-container sign-in-container">
+                    <form id="login-form" class="w-full">
+                        <h1 class="text-2xl font-bold text-white mb-4">Bem-vindo monstro!</h1>
+                        <div class="flex gap-4 mb-4">
+                            <a href="#" class="w-10 h-10 rounded-full border border-zinc-700 flex items-center justify-center text-zinc-400 hover:bg-zinc-700 hover:text-white transition"><i data-lucide="facebook" size="18"></i></a>
+                            <a href="#" class="w-10 h-10 rounded-full border border-zinc-700 flex items-center justify-center text-zinc-400 hover:bg-zinc-700 hover:text-white transition"><i data-lucide="google" size="18"></i></a>
+                        </div>
+                        <span class="text-xs text-zinc-500 mb-4">ou use sua conta de email</span>
+                        <input type="email" id="login-email" placeholder="Email" class="custom-input" required />
+                        <input type="password" id="login-senha" placeholder="Senha" class="custom-input" required />
+                        <a href="#" class="text-xs text-zinc-500 mt-2 hover:text-accent mb-4">Esqueceu sua senha?</a>
+                        <button type="submit" class="action-btn">Entrar</button>
+                        <p class="mobile-toggle" onclick="toggleMobileAuth()">Não tem conta? Criar</p>
+                    </form>
+                </div>
+
+                <!-- Overlay -->
+                <div class="overlay-container">
+                    <div class="overlay">
+                        <div class="overlay-panel overlay-left">
+                            <h1 class="text-2xl font-bold mb-4">Já tem acesso?</h1>
+                            <p class="mb-8 text-sm text-white/90">Mantenha o foco e registre seu progresso.</p>
+                            <button class="ghost-btn" id="signIn">Entrar</button>
+                        </div>
+                        <div class="overlay-panel overlay-right">
+                            <h1 class="text-2xl font-bold mb-4">Bora Crescer!</h1>
+                            <p class="mb-8 text-sm text-white/90">Cadastre-se e comece a controlar suas cargas hoje mesmo.</p>
+                            <button class="ghost-btn" id="signUp">Cadastrar</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ============================================================== -->
+        <!-- VIEW: DASHBOARD (LAYOUT COM WIDGET LATERAL)                   -->
+        <!-- ============================================================== -->
+        <section id="view-dashboard" class="view hidden w-full">
+            <div class="flex flex-col md:flex-row justify-between items-end mb-6">
+                <div>
+                    <h2 class="text-3xl font-extrabold text-white uppercase tracking-tight">Painel de Treino</h2>
+                    <p class="text-zinc-400 text-sm">Visão geral em <span id="current-year-display"></span></p>
+                </div>
+                <div class="flex gap-2 mt-4 md:mt-0">
+                    <button id="btn-start-workout" onclick="startWorkoutSession()" class="bg-accent hover:bg-accent-hover text-white px-4 py-2 rounded-lg font-bold flex items-center gap-2 text-sm transition shadow-lg shadow-orange-900/20">
+                        <i data-lucide="play" size="16"></i> Iniciar Treino
+                    </button>
+                    <button onclick="showView('body-weight')" class="bg-zinc-800 hover:bg-zinc-700 text-white px-4 py-2 rounded-lg font-bold flex items-center gap-2 text-sm transition border border-zinc-700">
+                        <i data-lucide="scale" size="16"></i> Meu Peso
+                    </button>
+                </div>
+            </div>
+            
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Coluna Principal (Esquerda - Maior) -->
+                <div class="lg:col-span-2 space-y-6">
+                    <!-- Fichas Section -->
+                    <div class="bg-secondary-dark p-6 rounded-xl shadow-lg border border-zinc-800 h-full">
+                        <div class="flex justify-between items-center mb-6">
+                            <h3 class="text-xl font-bold text-accent uppercase">Suas Fichas</h3>
+                            <button onclick="showView('criar-ficha')" class="bg-zinc-800 hover:bg-zinc-700 text-white px-4 py-2 rounded-lg font-bold flex items-center gap-2 text-sm transition border border-zinc-700">
+                                <i data-lucide="plus-circle" size="16"></i> Nova Ficha
+                            </button>
+                        </div>
+                        <div id="ficha-list" class="space-y-3">
+                            <p class="text-zinc-500 text-center py-8">Carregando...</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Coluna Lateral (Direita - Menor/Widget) -->
+                <div class="space-y-6">
+                    <!-- Calendar Section (Compacto) -->
+                    <div class="bg-secondary-dark p-4 rounded-xl shadow-lg border border-zinc-800">
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="text-xs font-bold text-zinc-400 uppercase tracking-wider flex items-center gap-2">
+                                <i data-lucide="calendar" size="14"></i> Frequência
+                            </h3>
+                            <div class="flex items-center gap-1 text-[10px] text-zinc-500">
+                                <div class="w-2 h-2 bg-success rounded-sm"></div>
+                                <span>Feito</span>
+                            </div>
+                        </div>
+                        
+                        <!-- Navegação de Mês Compacta -->
+                        <div class="bg-primary-dark p-3 rounded-lg border border-zinc-800">
+                            <div class="flex justify-between items-center mb-2 px-1">
+                                <button onclick="changeMonth(-1)" class="p-1 hover:bg-zinc-800 rounded text-zinc-400 hover:text-white transition">
+                                    <i data-lucide="chevron-left" size="16"></i>
+                                </button>
+                                <span id="calendar-month-year" class="text-sm font-bold text-white capitalize tracking-wide"></span>
+                                <button onclick="changeMonth(1)" class="p-1 hover:bg-zinc-800 rounded text-zinc-400 hover:text-white transition">
+                                    <i data-lucide="chevron-right" size="16"></i>
+                                </button>
+                            </div>
+
+                            <!-- Grid do Mês -->
+                            <div id="calendar-grid" class="calendar-month-grid w-full">
+                                <!-- Dias injetados via JS -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- VIEW: PESO CORPORAL -->
+        <section id="view-body-weight" class="view hidden w-full max-w-2xl">
+            <button onclick="showView('dashboard')" class="text-zinc-400 hover:text-white mb-4 flex items-center gap-2 text-sm transition"><i data-lucide="arrow-left" size="16"></i> Voltar</button>
+            <div class="bg-secondary-dark p-6 rounded-xl shadow-lg border border-zinc-800">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-2xl font-bold text-white">Peso Corporal</h2>
+                    <button onclick="addBodyWeight()" class="text-xs bg-accent hover:bg-accent-hover text-white px-3 py-2 rounded font-bold">
+                        + Registrar
+                    </button>
+                </div>
+                <div class="relative h-64 w-full mb-6">
+                    <canvas id="weightChart"></canvas>
+                </div>
+                <div id="weight-history" class="space-y-2 max-h-60 overflow-y-auto custom-scrollbar">
+                    <!-- Historico de peso -->
+                </div>
+            </div>
+        </section>
+
+        <!-- VIEW: CRIAR FICHA -->
+        <section id="view-criar-ficha" class="view hidden w-full max-w-md">
+            <button onclick="showView('dashboard')" class="text-zinc-400 hover:text-white mb-4 flex items-center gap-2 text-sm transition"><i data-lucide="arrow-left" size="16"></i> Voltar</button>
+            <div class="bg-secondary-dark p-8 rounded-xl shadow-lg border border-zinc-800">
+                <h2 class="text-2xl font-bold text-white mb-6 text-center">Nova Ficha</h2>
+                <form id="criar-ficha-form">
+                    <div class="mb-4">
+                        <label class="block text-xs font-bold text-zinc-400 uppercase mb-1">Nome</label>
+                        <input type="text" id="ficha-nome" class="custom-input" placeholder="Ex: Treino A - Peito" required>
+                    </div>
+                    <div class="mb-6">
+                        <label class="block text-xs font-bold text-zinc-400 uppercase mb-1">Dia da Semana</label>
+                        <select id="ficha-dia" class="custom-input bg-zinc-800 text-white border-none h-12">
+                            <option value="Segunda">Segunda-feira</option>
+                            <option value="Terça">Terça-feira</option>
+                            <option value="Quarta">Quarta-feira</option>
+                            <option value="Quinta">Quinta-feira</option>
+                            <option value="Sexta">Sexta-feira</option>
+                            <option value="Sábado">Sábado</option>
+                            <option value="Domingo">Domingo</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="action-btn w-full">Salvar Ficha</button>
+                </form>
+            </div>
+        </section>
+
+        <!-- VIEW: DETALHE DA FICHA -->
+        <section id="view-detalhe-ficha" class="view hidden w-full max-w-4xl">
+            <button onclick="showView('dashboard')" class="text-zinc-400 hover:text-white mb-4 flex items-center gap-2 text-sm transition"><i data-lucide="arrow-left" size="16"></i> Voltar</button>
+            
+            <div class="bg-secondary-dark p-6 rounded-xl shadow-lg border border-zinc-800">
+                <div class="flex justify-between items-start mb-6 border-b border-zinc-800 pb-4">
+                    <div>
+                        <span id="detalhe-dia" class="text-sm font-bold text-accent uppercase tracking-wider">DIA</span>
+                        <h2 id="detalhe-nome-ficha" class="text-3xl font-extrabold text-white mt-1">NOME DA FICHA</h2>
+                    </div>
+                    <button id="btn-remover-ficha" class="text-danger hover:bg-danger/10 px-3 py-2 rounded-lg transition flex items-center gap-2 text-sm font-medium">
+                        <i data-lucide="trash-2" size="16"></i> Excluir
+                    </button>
+                </div>
+                
+                <div id="detalhe-exercicios" class="space-y-4 mb-6 relative">
+                    <!-- Lista de exercícios -->
+                </div>
+                
+                <button onclick="showView('adicionar-exercicio')" class="w-full py-4 border-2 border-dashed border-zinc-700 text-zinc-400 rounded-xl hover:border-accent hover:text-accent transition flex items-center justify-center gap-2 font-medium bg-zinc-900/50">
+                    <i data-lucide="plus" size="18"></i> Adicionar Exercício
+                </button>
+            </div>
+        </section>
+
+        <!-- VIEW: ADICIONAR EXERCÍCIO -->
+        <section id="view-adicionar-exercicio" class="view hidden w-full max-w-lg">
+            <button onclick="viewFichaDetalhe(currentFichaId)" class="text-zinc-400 hover:text-white mb-4 flex items-center gap-2 text-sm transition"><i data-lucide="arrow-left" size="16"></i> Voltar</button>
+            <div class="bg-secondary-dark p-6 rounded-xl shadow-lg border border-zinc-800 flex flex-col h-[600px]">
+                <h2 class="text-xl font-bold text-white mb-2 text-center">Biblioteca de Exercícios</h2>
+                <p class="text-center text-zinc-400 text-xs mb-4">Adicionando em: <span id="ficha-destino-nome" class="font-bold text-accent">...</span></p>
+                <div id="exercicio-selection-list" class="flex-grow overflow-y-auto pr-2 space-y-4 custom-scrollbar"></div>
+            </div>
+        </section>
+
+        <!-- VIEW: REGISTRAR SÉRIE -->
+        <section id="view-registrar-serie" class="view hidden w-full max-w-md">
+            <button onclick="viewFichaDetalhe(currentFichaId)" class="text-zinc-400 hover:text-white mb-4 flex items-center gap-2 text-sm transition"><i data-lucide="arrow-left" size="16"></i> Voltar</button>
+            <div class="bg-secondary-dark p-8 rounded-xl shadow-lg border border-zinc-800 relative overflow-hidden">
+                <div class="absolute -top-10 -right-10 w-32 h-32 bg-accent/10 rounded-full blur-2xl"></div>
+                <h2 class="text-center text-sm font-bold text-zinc-400 uppercase tracking-widest mb-1">Registrar Série</h2>
+                <h3 id="registrar-exercicio-nome" class="text-2xl font-extrabold text-white text-center mb-6">Nome Exercício</h3>
+                
+                <form id="registrar-serie-form">
+                    <!-- Notas de Ajuste -->
+                    <div class="mb-4">
+                        <label class="block text-xs font-bold text-zinc-400 uppercase mb-1 flex items-center gap-1">
+                            <i data-lucide="notebook-pen" size="12"></i> Setup / Ajustes
+                        </label>
+                        <textarea id="registro-notas" rows="2" class="w-full bg-primary-dark border border-zinc-700 rounded-lg p-2 text-sm text-zinc-300 focus:border-accent outline-none resize-none" placeholder="Ex: Banco pino 3, Pegada aberta..."></textarea>
+                    </div>
+
+                    <div class="mb-6">
+                        <div class="flex justify-between items-center mb-2">
+                             <label class="text-xs font-bold text-zinc-400 uppercase">Tipo</label>
+                        </div>
+                        <div class="grid grid-cols-3 gap-2">
+                            <label class="cursor-pointer">
+                                <input type="radio" name="tipo_serie" value="valida" checked class="peer hidden">
+                                <div class="p-2 rounded-lg border border-zinc-700 text-zinc-400 text-center text-xs font-medium peer-checked:bg-success peer-checked:text-white peer-checked:border-success transition hover:bg-zinc-800/50">Válida</div>
+                            </label>
+                             <label class="cursor-pointer">
+                                <input type="radio" name="tipo_serie" value="reconhecimento" class="peer hidden">
+                                <div class="p-2 rounded-lg border border-zinc-700 text-zinc-400 text-center text-xs font-medium peer-checked:bg-warn peer-checked:text-white peer-checked:border-warn transition hover:bg-zinc-800/50">Feeder</div>
+                            </label>
+                             <label class="cursor-pointer">
+                                <input type="radio" name="tipo_serie" value="preparacao" class="peer hidden">
+                                <div class="p-2 rounded-lg border border-zinc-700 text-zinc-400 text-center text-xs font-medium peer-checked:bg-accent peer-checked:text-white peer-checked:border-accent transition hover:bg-zinc-800/50">Warm-up</div>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="flex gap-4 mb-8">
+                        <div class="w-1/2">
+                            <label class="block text-xs font-bold text-zinc-400 uppercase mb-2 text-center">Carga (kg)</label>
+                            <input type="number" id="registro-peso" required step="0.5" class="w-full bg-primary-dark border-2 border-zinc-700 rounded-xl py-4 text-center text-3xl font-bold text-white focus:border-accent outline-none transition" placeholder="0">
+                        </div>
+                        <div class="w-1/2">
+                            <label class="block text-xs font-bold text-zinc-400 uppercase mb-2 text-center">Reps</label>
+                            <div class="relative">
+                                <input type="number" id="registro-reps" required class="w-full bg-primary-dark border-2 border-zinc-700 rounded-xl py-4 text-center text-3xl font-bold text-white focus:border-accent outline-none transition" placeholder="0">
+                                <div class="absolute -right-2 top-1/2 -translate-y-1/2 flex flex-col gap-1">
+                                    <button type="button" onclick="adjustReps(1)" class="w-6 h-6 bg-zinc-700 rounded text-white flex items-center justify-center hover:bg-zinc-600 text-xs select-none">+</button>
+                                    <button type="button" onclick="adjustReps(-1)" class="w-6 h-6 bg-zinc-700 rounded text-white flex items-center justify-center hover:bg-zinc-600 text-xs select-none">-</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="action-btn w-full flex justify-center items-center gap-2">
+                        <i data-lucide="check" size="20"></i> Confirmar & Descansar
+                    </button>
+                </form>
+            </div>
+        </section>
+
+        <!-- VIEW: HISTÓRICO -->
+        <section id="view-historico" class="view hidden w-full max-w-4xl">
+            <button onclick="viewFichaDetalhe(currentFichaId)" class="text-zinc-400 hover:text-white mb-4 flex items-center gap-2 text-sm transition"><i data-lucide="arrow-left" size="16"></i> Voltar</button>
+            <div class="bg-secondary-dark p-6 rounded-xl shadow-lg border border-zinc-800">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 id="historico-title" class="text-2xl font-bold text-white">Progresso</h2>
+                    <span class="text-xs text-success bg-success/10 px-2 py-1 rounded border border-success/20">Apenas Séries Válidas</span>
+                </div>
+                <div id="historico-summary" class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8"></div>
+                <div class="relative h-80 w-full"><canvas id="progressChart"></canvas></div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- CRONÔMETRO DE DESCANSO -->
+    <div id="rest-timer-overlay" class="fixed bottom-0 left-0 w-full bg-secondary-dark border-t border-zinc-700 p-4 shadow-2xl transform translate-y-full transition-transform duration-300 z-50 flex flex-col items-center justify-center">
+        <div class="w-full max-w-2xl flex items-center justify-between">
+            <div class="flex flex-col">
+                <span class="text-[10px] text-zinc-400 uppercase font-bold tracking-wider mb-1 flex items-center gap-1"><i data-lucide="hourglass" size="12"></i> Descanso</span>
+                <span id="timer-display" class="text-4xl font-mono font-bold text-white tracking-widest">00:00</span>
+            </div>
+            <div class="flex items-center gap-2">
+                <button onclick="adjustTimer(-10)" class="px-3 py-2 bg-zinc-800 hover:bg-zinc-700 rounded-lg text-zinc-300 text-xs font-bold border border-zinc-700">-10s</button>
+                <button onclick="adjustTimer(30)" class="px-3 py-2 bg-zinc-800 hover:bg-zinc-700 rounded-lg text-zinc-300 text-xs font-bold border border-zinc-700">+30s</button>
+                <div class="w-px h-8 bg-zinc-700 mx-1"></div>
+                <button onclick="stopTimer()" class="px-4 py-2 bg-danger hover:bg-red-600 rounded-lg text-white text-xs font-bold flex items-center gap-2 shadow-lg shadow-red-900/20 transition"><i data-lucide="x" size="14"></i> Parar</button>
+            </div>
+        </div>
+        
+        <!-- Barra de Progresso com Personagem (Fantasma) -->
+        <div class="w-full max-w-2xl h-1 bg-zinc-800 mt-4 rounded-full relative">
+            <div id="timer-progress" class="h-full bg-accent transition-all duration-1000 ease-linear relative" style="width: 100%">
+                <!-- O Personagem (Fantasma) -->
+                <div id="timer-character" class="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 -mt-4 timer-character-anim text-white drop-shadow-md">
+                     <i data-lucide="ghost" size="24" fill="white" class="text-zinc-900"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL DE RESUMO DO DIA -->
+    <div id="summary-modal" class="fixed inset-0 z-[100] hidden flex items-center justify-center p-4">
+        <div class="bg-secondary-dark rounded-xl shadow-2xl border border-zinc-700 w-full max-w-md p-6 relative animate-fade-in">
+            <button onclick="closeSummaryModal()" class="absolute top-4 right-4 text-zinc-400 hover:text-white"><i data-lucide="x" size="20"></i></button>
+            <h3 id="modal-date-title" class="text-xl font-bold text-white mb-4 border-b border-zinc-700 pb-2">Resumo do Treino</h3>
+            <div id="modal-content" class="space-y-3 max-h-[60vh] overflow-y-auto custom-scrollbar">
+                <!-- Conteúdo injetado -->
+            </div>
+        </div>
+    </div>
+
+    <!-- JS Logic -->
+    <script>
+        lucide.createIcons();
+
+        // --- UI TOGGLING ---
+        const authContainer = document.getElementById('container');
+        document.getElementById('signUp').addEventListener('click', () => authContainer.classList.add("right-panel-active"));
+        document.getElementById('signIn').addEventListener('click', () => authContainer.classList.remove("right-panel-active"));
+        
+        function toggleMobileAuth() {
+            const isSignUp = document.querySelector('.sign-up-container').style.display === 'flex';
+            document.querySelector('.sign-up-container').style.display = isSignUp ? 'none' : 'flex';
+            document.querySelector('.sign-in-container').style.display = isSignUp ? 'flex' : 'none';
+            authContainer.classList.toggle("right-panel-active");
+        }
+
+        // --- DATABASE ---
+        let currentUserEmail = null; 
+        const DB = {
+            init() {
+                ['cf_fichas', 'cf_exercicios', 'cf_historico', 'cf_bodyweight', 'cf_activity_log', 'cf_workout_session'].forEach(k => {
+                    if(!localStorage.getItem(k)) localStorage.setItem(k, JSON.stringify(k === 'cf_workout_session' ? {} : []));
+                });
+            },
+            // Generics
+            get(key) { return JSON.parse(localStorage.getItem(key)); },
+            set(key, val) { localStorage.setItem(key, JSON.stringify(val)); },
+            
+            // Methods
+            getFichas() { return this.get('cf_fichas').filter(f => f.user_email === currentUserEmail); },
+            saveFicha(f) { f.user_email = currentUserEmail; const l = this.get('cf_fichas'); l.push(f); this.set('cf_fichas', l); },
+            deleteFicha(id) { this.set('cf_fichas', this.get('cf_fichas').filter(f => f.id !== id)); },
+            
+            getExercicios(fid) { return this.get('cf_exercicios').filter(e => e.ficha_id === fid); },
+            getExercicio(id) { return this.get('cf_exercicios').find(e => e.id === id); },
+            saveExercicio(ex) { const l = this.get('cf_exercicios'); l.push(ex); this.set('cf_exercicios', l); },
+            deleteExercicio(id) { this.set('cf_exercicios', this.get('cf_exercicios').filter(e => e.id !== id)); },
+            updateExercicio(updated) {
+                const l = this.get('cf_exercicios').map(e => e.id === updated.id ? updated : e);
+                this.set('cf_exercicios', l);
+            },
+
+            getHistorico(eid) { 
+                return this.get('cf_historico')
+                    .filter(h => h.ficha_exercicio_id === eid)
+                    .sort((a,b) => new Date(a.data_registro) - new Date(b.data_registro)); 
+            },
+            
+            // Helper for Calendar
+            getAllUserHistory() {
+                const myFichas = this.getFichas().map(f => f.id);
+                const myExercises = this.get('cf_exercicios').filter(e => myFichas.includes(e.ficha_id));
+                const myExIds = myExercises.map(e => e.id);
+                return this.get('cf_historico')
+                    .filter(h => myExIds.includes(h.ficha_exercicio_id))
+                    .map(h => {
+                        const ex = myExercises.find(e => e.id === h.ficha_exercicio_id);
+                        return { ...h, exercicio_nome: ex ? ex.nome : 'Desconhecido' };
+                    });
+            },
+
+            saveHistorico(h) { 
+                const l = this.get('cf_historico'); l.push(h); this.set('cf_historico', l); 
+                this.logActivity();
+            },
+
+            // Body Weight
+            getBodyWeight() { return this.get('cf_bodyweight').filter(w => w.user_email === currentUserEmail).sort((a,b) => new Date(a.date) - new Date(b.date)); },
+            saveBodyWeight(w) { w.user_email = currentUserEmail; const l = this.get('cf_bodyweight'); l.push(w); this.set('cf_bodyweight', l); },
+
+            // Activity Log (Legacy)
+            getActivity() { return this.get('cf_activity_log').filter(a => a.user_email === currentUserEmail); },
+            logActivity() {
+                const today = new Date().toISOString().split('T')[0];
+                const logs = this.get('cf_activity_log');
+                if(!logs.find(l => l.date === today && l.user_email === currentUserEmail)) {
+                    logs.push({ date: today, user_email: currentUserEmail });
+                    this.set('cf_activity_log', logs);
+                }
+            },
+
+            // Session
+            getSession() { return this.get('cf_workout_session')[currentUserEmail]; },
+            setSession(start) { 
+                const s = this.get('cf_workout_session'); 
+                if(start) s[currentUserEmail] = start; else delete s[currentUserEmail];
+                this.set('cf_workout_session', s); 
+            }
+        };
+        DB.init();
+
+        // --- APP STATE ---
+        let currentFichaId = null;
+        let currentFichaNome = '';
+        let currentExId = null;
+        let myChart = null;
+        let weightChart = null;
+        let timerInterval = null;
+        let timeLeft = 0;
+        let totalTime = 0;
+        let workoutTimerInterval = null;
+        let calendarDate = new Date();
+
+        const MOCK_EXERCISES = [
+            // Peito
+            { nome: "Supino Reto (Barra/Halteres)", grupo: "Peito" },
+            { nome: "Supino Inclinado (Barra/Halteres/Máquina)", grupo: "Peito" },
+            { nome: "Crucifixo com Halteres (Inclinado/Reto)", grupo: "Peito" },
+            { nome: "Crossover no Cabo", grupo: "Peito" },
+            { nome: "Flexão de Braço (Push-ups)", grupo: "Peito" },
+            { nome: "Supino Declinado", grupo: "Peito" },
+            { nome: "Peck Deck (Voador)", grupo: "Peito" },
+
+            // Costas
+            { nome: "Levantamento Terra (Deadlift)", grupo: "Costas" },
+            { nome: "Barra Fixa (Pull-ups)", grupo: "Costas" },
+            { nome: "Remada Curvada (Barra/Halteres)", grupo: "Costas" },
+            { nome: "Puxada Alta (Lat Pulldown)", grupo: "Costas" },
+            { nome: "Remada Cavalinho", grupo: "Costas" },
+            { nome: "Remada Baixa (Triângulo)", grupo: "Costas" },
+            { nome: "Serrote (Remada Unilateral)", grupo: "Costas" },
+
+            // Pernas
+            { nome: "Agachamento Livre (Barra)", grupo: "Pernas" },
+            { nome: "Leg Press 45º", grupo: "Pernas" },
+            { nome: "Cadeira Extensora", grupo: "Pernas" },
+            { nome: "Mesa Flexora", grupo: "Pernas" },
+            { nome: "Stiff", grupo: "Pernas" },
+            { nome: "Afundo/Passada", grupo: "Pernas" },
+            { nome: "Agachamento Búlgaro", grupo: "Pernas" },
+            { nome: "Panturrilha em Pé/Sentado", grupo: "Pernas" },
+
+            // Ombros
+            { nome: "Desenvolvimento Militar (Barra/Halteres)", grupo: "Ombros" },
+            { nome: "Elevação Lateral", grupo: "Ombros" },
+            { nome: "Elevação Frontal", grupo: "Ombros" },
+            { nome: "Crucifixo Inverso", grupo: "Ombros" },
+            { nome: "Remada Alta", grupo: "Ombros" },
+            { nome: "Face Pull", grupo: "Ombros" },
+
+            // Bíceps
+            { nome: "Rosca Direta (Barra Reta/W)", grupo: "Bíceps" },
+            { nome: "Rosca Alternada (Halteres)", grupo: "Bíceps" },
+            { nome: "Rosca Martelo", grupo: "Bíceps" },
+            { nome: "Rosca Scott", grupo: "Bíceps" },
+            { nome: "Rosca Concentrada", grupo: "Bíceps" },
+
+            // Tríceps
+            { nome: "Tríceps Pulley (Corda/Barra)", grupo: "Tríceps" },
+            { nome: "Tríceps Testa", grupo: "Tríceps" },
+            { nome: "Mergulho (Paralelas/Banco)", grupo: "Tríceps" },
+            { nome: "Tríceps Francês", grupo: "Tríceps" },
+            { nome: "Supino Fechado", grupo: "Tríceps" },
+
+            // Antebraço
+            { nome: "Flexão de Punho", grupo: "Antebraço" },
+            { nome: "Extensão de Punho", grupo: "Antebraço" },
+            { nome: "Rosca Inversa", grupo: "Antebraço" },
+
+            // Abdômen
+            { nome: "Abdominal Crunch", grupo: "Abdômen" },
+            { nome: "Prancha (Plank)", grupo: "Abdômen" },
+            { nome: "Elevação de Pernas", grupo: "Abdômen" },
+            { nome: "Abdominal Infra", grupo: "Abdômen" },
+            { nome: "Abdominal Oblíquo", grupo: "Abdômen" }
+        ];
+
+        // --- WORKOUT SESSION TIMER ---
+        function startWorkoutSession() {
+            const start = Date.now();
+            DB.setSession(start);
+            initWorkoutTimer(start);
+            document.getElementById('btn-start-workout').classList.add('hidden');
+        }
+
+        function stopWorkoutSession() {
+            if(confirm("Finalizar treino atual?")) {
+                DB.setSession(null);
+                clearInterval(workoutTimerInterval);
+                document.getElementById('workout-timer-container').classList.add('hidden');
+                document.getElementById('btn-start-workout').classList.remove('hidden');
+            }
+        }
+
+        function initWorkoutTimer(startTime) {
+            if(!startTime) return;
+            document.getElementById('workout-timer-container').classList.remove('hidden');
+            document.getElementById('btn-start-workout').classList.add('hidden');
+            
+            clearInterval(workoutTimerInterval);
+            workoutTimerInterval = setInterval(() => {
+                const diff = Math.floor((Date.now() - startTime) / 1000);
+                const m = Math.floor(diff / 60).toString().padStart(2, '0');
+                const s = (diff % 60).toString().padStart(2, '0');
+                document.getElementById('workout-timer-display').innerText = `${m}:${s}`;
+            }, 1000);
+        }
+
+        // --- REST TIMER ---
+        function startTimer(seconds) {
+            clearInterval(timerInterval);
+            timeLeft = seconds; totalTime = seconds;
+            updateTimerDisplay();
+            document.getElementById('rest-timer-overlay').classList.add('timer-visible');
+            timerInterval = setInterval(() => {
+                timeLeft--; updateTimerDisplay();
+                if(timeLeft <= 0) stopTimer();
+            }, 1000);
+        }
+        function stopTimer() { clearInterval(timerInterval); document.getElementById('rest-timer-overlay').classList.remove('timer-visible'); }
+        function adjustTimer(s) { timeLeft += s; if(timeLeft < 0) timeLeft = 0; if(timeLeft > totalTime) totalTime = timeLeft; updateTimerDisplay(); }
+        function updateTimerDisplay() {
+            const m = Math.floor(timeLeft/60).toString().padStart(2,'0');
+            const s = (timeLeft%60).toString().padStart(2,'0');
+            document.getElementById('timer-display').innerText = `${m}:${s}`;
+            const pct = (timeLeft/totalTime)*100;
+            const bar = document.getElementById('timer-progress');
+            bar.style.width = `${pct}%`;
+            bar.className = `h-full transition-all duration-1000 ease-linear relative ${pct < 20 ? 'bg-danger' : 'bg-accent'}`;
+        }
+
+        // --- NAVIGATION ---
+        function showView(viewName) {
+            document.querySelectorAll('.view').forEach(v => v.classList.add('hidden'));
+            const target = document.getElementById(`view-${viewName}`);
+            
+            const navUser = document.getElementById('nav-user-area');
+            if(viewName === 'auth') navUser.classList.add('hidden');
+            else {
+                navUser.classList.remove('hidden');
+                navUser.classList.add('flex');
+            }
+
+            if(target) target.classList.remove('hidden');
+
+            if(viewName === 'dashboard') {
+                loadFichas();
+                renderMonthlyCalendar(); 
+                initWorkoutTimer(DB.getSession());
+            }
+            if(viewName === 'adicionar-exercicio') loadExercicioList();
+            if(viewName === 'body-weight') loadBodyWeight();
+            
+            lucide.createIcons();
+        }
+
+        function displayMessage(msg, type='success') {
+            const container = document.getElementById('message-container');
+            const el = document.createElement('div');
+            el.className = `${type==='success'?'bg-success':'bg-danger'} text-white px-6 py-3 rounded-lg shadow-xl mb-3 animate-bounce font-medium flex items-center gap-2`;
+            el.innerHTML = type === 'success' ? `<i data-lucide="check-circle" size="18"></i> ${msg}` : `<i data-lucide="alert-circle" size="18"></i> ${msg}`;
+            container.appendChild(el);
+            lucide.createIcons();
+            setTimeout(() => el.remove(), 3000);
+        }
+
+        // --- AUTH ---
+        function handleLogin(email, name) {
+            currentUserEmail = email;
+            document.getElementById('user-name-display').innerText = name || email.split('@')[0];
+            showView('dashboard');
+            displayMessage('Bem-vindo!');
+        }
+        document.getElementById('login-form').addEventListener('submit', (e) => { e.preventDefault(); handleLogin(document.getElementById('login-email').value); });
+        document.getElementById('cadastro-form').addEventListener('submit', (e) => { e.preventDefault(); handleLogin(document.getElementById('cadastro-email').value, document.getElementById('cadastro-nome').value); });
+        document.getElementById('nav-logout').addEventListener('click', () => { currentUserEmail = null; showView('auth'); });
+
+        // --- CALENDAR MENSAL (COMPACTO) ---
+        function changeMonth(delta) {
+            calendarDate.setMonth(calendarDate.getMonth() + delta);
+            renderMonthlyCalendar();
+        }
+
+        function renderMonthlyCalendar() {
+            const container = document.getElementById('calendar-grid');
+            const monthLabel = document.getElementById('calendar-month-year');
+            container.innerHTML = '';
+            
+            const year = calendarDate.getFullYear();
+            const month = calendarDate.getMonth();
+            const monthNames = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
+            monthLabel.innerText = `${monthNames[month]} ${year}`;
+
+            const history = DB.getAllUserHistory();
+            const activeDays = new Set(history.map(h => h.data_registro.split('T')[0]));
+
+            const daysHeader = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'];
+            daysHeader.forEach(d => {
+                const h = document.createElement('div');
+                h.innerText = d;
+                h.className = 'calendar-day-header';
+                container.appendChild(h);
+            });
+
+            const firstDayIndex = new Date(year, month, 1).getDay();
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+            for(let i=0; i<firstDayIndex; i++) {
+                const empty = document.createElement('div');
+                empty.className = 'calendar-day empty bg-transparent';
+                container.appendChild(empty);
+            }
+
+            for(let d=1; d<=daysInMonth; d++) {
+                const dateStr = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+                const dayEl = document.createElement('div');
+                dayEl.innerText = d;
+                dayEl.className = 'calendar-day bg-secondary-dark border border-zinc-700'; // Ajuste na cor
+                if (activeDays.has(dateStr)) {
+                    dayEl.classList.add('active');
+                    dayEl.onclick = () => openDaySummary(dateStr);
+                }
+                container.appendChild(dayEl);
+            }
+            lucide.createIcons();
+        }
+
+        function openDaySummary(dateStr) {
+            const modal = document.getElementById('summary-modal');
+            const content = document.getElementById('modal-content');
+            const title = document.getElementById('modal-date-title');
+            const [y, m, d] = dateStr.split('-');
+            title.innerText = `Treino de ${d}/${m}/${y}`;
+
+            const history = DB.getAllUserHistory().filter(h => h.data_registro.startsWith(dateStr));
+            const grouped = history.reduce((acc, curr) => {
+                acc[curr.exercicio_nome] = acc[curr.exercicio_nome] || [];
+                acc[curr.exercicio_nome].push(curr);
+                return acc;
+            }, {});
+
+            if (Object.keys(grouped).length === 0) {
+                content.innerHTML = '<p class="text-zinc-500">Nenhum detalhe encontrado.</p>';
+            } else {
+                content.innerHTML = Object.entries(grouped).map(([exName, series]) => `
+                    <div class="bg-primary-dark p-3 rounded-lg border border-zinc-800">
+                        <h4 class="text-accent font-bold text-sm mb-2">${exName}</h4>
+                        <div class="grid grid-cols-3 gap-2">
+                            ${series.map((s, i) => `
+                                <div class="bg-secondary-dark p-2 rounded text-center border border-zinc-700">
+                                    <div class="text-[10px] text-zinc-400">Série ${i+1}</div>
+                                    <div class="text-white font-bold text-xs">${s.peso}kg x ${s.reps}</div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `).join('');
+            }
+            modal.classList.remove('hidden');
+        }
+
+        function closeSummaryModal() {
+            document.getElementById('summary-modal').classList.add('hidden');
+        }
+
+        // --- BODY WEIGHT ---
+        function loadBodyWeight() {
+            const data = DB.getBodyWeight();
+            const list = document.getElementById('weight-history');
+            list.innerHTML = data.map(d => `<div class="flex justify-between p-2 bg-secondary-dark rounded border border-zinc-800 text-sm"><span class="text-zinc-400">${new Date(d.date).toLocaleDateString()}</span><span class="font-bold text-white">${d.weight} kg</span></div>`).reverse().join('');
+
+            const ctx = document.getElementById('weightChart').getContext('2d');
+            if(weightChart) weightChart.destroy();
+            weightChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: data.map(d => new Date(d.date).toLocaleDateString()),
+                    datasets: [{ label: 'Peso', data: data.map(d => d.weight), borderColor: '#f97316', backgroundColor: 'rgba(249, 115, 22, 0.1)', tension: 0.4, fill: true }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, scales: { x: { display: false }, y: { grid: { color: '#27272a' } } } }
+            });
+        }
+
+        window.addBodyWeight = function() {
+            const w = prompt("Digite seu peso atual (kg):");
+            if(w && !isNaN(w)) {
+                DB.saveBodyWeight({ weight: parseFloat(w), date: new Date().toISOString() });
+                loadBodyWeight();
+                displayMessage('Peso registrado!');
+            }
+        };
+
+        // --- FICHAS & EXERCISES ---
+        function loadFichas() {
+            const list = document.getElementById('ficha-list');
+            const fichas = DB.getFichas();
+            list.innerHTML = fichas.length ? fichas.map(f => `
+                <div onclick="viewFichaDetalhe(${f.id})" class="bg-primary-dark p-4 rounded-lg border border-zinc-800 hover:border-accent cursor-pointer transition group flex justify-between items-center">
+                    <div><span class="text-[10px] font-bold bg-secondary-dark text-zinc-400 px-2 py-1 rounded uppercase tracking-wider mb-2 inline-block border border-zinc-700">${f.dia}</span>
+                    <h4 class="text-lg font-bold text-white group-hover:text-accent transition">${f.nome}</h4>
+                    <p class="text-xs text-zinc-500">${DB.getExercicios(f.id).length} exercícios</p></div>
+                    <i data-lucide="chevron-right" class="text-zinc-600 group-hover:text-accent transition"></i>
+                </div>`).join('') : '<div class="text-center py-10 border-2 border-dashed border-zinc-800 rounded-xl text-zinc-600">Sem fichas.</div>';
+            lucide.createIcons();
+        }
+
+        document.getElementById('criar-ficha-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            DB.saveFicha({ id: Date.now(), nome: document.getElementById('ficha-nome').value, dia: document.getElementById('ficha-dia').value });
+            displayMessage('Ficha criada!'); e.target.reset(); showView('dashboard');
+        });
+
+        // --- DETAIL VIEW LOGIC (BI-SETS & PLATEAU) ---
+        window.viewFichaDetalhe = function(id) {
+            currentFichaId = id;
+            const ficha = DB.getFichas().find(f => f.id === id);
+            document.getElementById('detalhe-nome-ficha').innerText = ficha.nome;
+            document.getElementById('detalhe-dia').innerText = ficha.dia;
+            document.getElementById('btn-remover-ficha').onclick = () => { if(confirm('Excluir?')) { DB.deleteFicha(id); showView('dashboard'); } };
+
+            const list = document.getElementById('detalhe-exercicios');
+            const exs = DB.getExercicios(id);
+            
+            list.innerHTML = exs.length ? exs.map((ex, i) => {
+                // Check Plateau
+                const hist = DB.getHistorico(ex.id).filter(h => h.tipo === 'valida').slice(-3);
+                let isPlateau = false;
+                if(hist.length >= 3) {
+                    const w3 = hist[hist.length-3].peso, w2 = hist[hist.length-2].peso, w1 = hist[hist.length-1].peso;
+                    if(w1 <= w2 && w2 <= w3) isPlateau = true;
+                }
+
+                // Check Bi-set link
+                const isLinked = ex.is_biset; 
+                
+                return `
+                <div class="relative ${isLinked ? 'mb-0 pb-6' : 'mb-4'}">
+                    ${isLinked ? '<div class="biset-connector"></div>' : ''}
+                    <div class="bg-primary-dark p-4 rounded-lg border border-zinc-800 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 ${isLinked ? 'biset-card' : ''} relative z-10">
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <h4 class="font-bold text-white">${ex.nome}</h4>
+                                ${isPlateau ? '<span class="text-warn" title="Carga estagnada há 3 treinos"><i data-lucide="alert-triangle" size="14"></i></span>' : ''}
+                            </div>
+                            <span class="text-xs text-zinc-500 bg-secondary-dark px-2 py-0.5 rounded border border-zinc-700">${ex.grupo}</span>
+                            ${ex.notes ? `<p class="text-[10px] text-zinc-400 mt-1 italic"><i data-lucide="notebook-pen" size="10"></i> ${ex.notes}</p>` : ''}
+                        </div>
+                        <div class="flex gap-2 w-full sm:w-auto">
+                            <button onclick="toggleBiset(${ex.id}, ${!ex.is_biset})" class="px-2 py-2 rounded border border-zinc-700 text-zinc-400 hover:text-accent hover:border-accent" title="Vincular Bi-set">
+                                <i data-lucide="${isLinked ? 'unlink' : 'link'}" size="14"></i>
+                            </button>
+                            <button onclick="showProgress(${ex.id}, '${ex.nome}')" class="flex-1 sm:flex-none px-3 py-2 rounded bg-secondary-dark text-zinc-300 hover:bg-zinc-800 text-xs font-medium border border-zinc-700"><i data-lucide="bar-chart-2" size="14"></i></button>
+                            <button onclick="viewRegistrar(${ex.id}, '${ex.nome}')" class="flex-1 sm:flex-none px-3 py-2 rounded bg-accent text-white hover:bg-accent-hover text-xs font-bold shadow-lg shadow-orange-900/20 flex items-center justify-center gap-1">Registrar</button>
+                            <button onclick="deleteExercicio(${ex.id})" class="px-2 py-2 rounded text-danger hover:bg-danger/10"><i data-lucide="trash" size="14"></i></button>
+                        </div>
+                    </div>
+                </div>`;
+            }).join('') : '<p class="text-zinc-600 text-center py-4">Vazio.</p>';
+            
+            showView('detalhe-ficha');
+        };
+
+        window.toggleBiset = function(id, status) {
+            const ex = DB.getExercicio(id);
+            ex.is_biset = status;
+            DB.updateExercicio(ex);
+            viewFichaDetalhe(currentFichaId);
+        }
+
+        window.deleteExercicio = function(id) { if(confirm('Remover?')) { DB.deleteExercicio(id); viewFichaDetalhe(currentFichaId); } };
+
+        // --- EXERCISE SELECTION ---
+        function loadExercicioList() {
+            document.getElementById('ficha-destino-nome').innerText = DB.getFichas().find(f => f.id === currentFichaId).nome;
+            const container = document.getElementById('exercicio-selection-list');
+            const grouped = MOCK_EXERCISES.reduce((acc, ex) => { (acc[ex.grupo] = acc[ex.grupo] || []).push(ex); return acc; }, {});
+            container.innerHTML = Object.entries(grouped).map(([grp, lst]) => `
+                <div class="mb-4"><h5 class="text-xs font-bold text-accent uppercase mb-2 sticky top-0 bg-secondary-dark py-1 z-10 border-b border-zinc-700">${grp}</h5>
+                <div class="space-y-1">${lst.map(ex => `<div class="flex justify-between items-center p-3 rounded bg-primary-dark border border-zinc-800 hover:border-zinc-600 transition group"><span class="text-sm text-zinc-300 group-hover:text-white">${ex.nome}</span><button onclick="selectExercicio('${ex.nome}', '${ex.grupo}')" class="text-xs bg-zinc-800 hover:bg-success hover:text-white text-zinc-300 px-3 py-1 rounded transition border border-zinc-700">Add</button></div>`).join('')}</div></div>`
+            ).join('');
+        }
+        window.selectExercicio = function(n, g) { DB.saveExercicio({id:Date.now(), ficha_id:currentFichaId, nome:n, grupo:g}); displayMessage('Adicionado!'); viewFichaDetalhe(currentFichaId); };
+
+        // --- REGISTRAR ---
+        window.viewRegistrar = function(id, nome) {
+            currentExId = id;
+            document.getElementById('registrar-exercicio-nome').innerText = nome;
+            const ex = DB.getExercicio(id);
+            document.getElementById('registro-notas').value = ex.notes || ''; // Load notes
+            
+            const hist = DB.getHistorico(id);
+            const last = hist.reverse().find(h => h.tipo === 'valida');
+            if(last) { document.getElementById('registro-peso').value = last.peso; document.getElementById('registro-reps').value = last.reps; }
+            else { document.getElementById('registro-peso').value = ''; document.getElementById('registro-reps').value = ''; }
+            showView('registrar-serie');
+        };
+
+        window.adjustReps = function(d) { const i = document.getElementById('registro-reps'); i.value = Math.max(0, (parseInt(i.value)||0)+d); };
+
+        document.getElementById('registrar-serie-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            // Save Notes
+            const ex = DB.getExercicio(currentExId);
+            ex.notes = document.getElementById('registro-notas').value;
+            DB.updateExercicio(ex);
+
+            DB.saveHistorico({
+                id: Date.now(), ficha_exercicio_id: currentExId,
+                peso: parseFloat(document.getElementById('registro-peso').value),
+                reps: parseInt(document.getElementById('registro-reps').value),
+                tipo: document.querySelector('input[name="tipo_serie"]:checked').value,
+                data_registro: new Date().toISOString()
+            });
+            displayMessage('Série Salva!'); startTimer(90); viewFichaDetalhe(currentFichaId);
+            
+            // Auto-start workout if not started
+            if(!DB.getSession()) startWorkoutSession();
+        });
+
+        // --- GRAPH ---
+        window.showProgress = function(id, nome) {
+            const data = DB.getHistorico(id).filter(h => h.tipo==='valida'||!h.tipo);
+            document.getElementById('historico-title').innerText = nome; showView('historico');
+            const ctx = document.getElementById('progressChart').getContext('2d');
+            if(myChart) myChart.destroy();
+            if(!data.length) { document.getElementById('historico-summary').innerHTML='<p class="col-span-4 text-center text-zinc-500 py-10">Sem dados.</p>'; return; }
+            
+            const maxL = Math.max(...data.map(d=>d.peso));
+            document.getElementById('historico-summary').innerHTML = `<div class="bg-primary-dark p-3 rounded-lg border border-zinc-700 text-center"><p class="text-xs text-zinc-400 uppercase">PR</p><p class="text-xl font-bold text-accent">${maxL}kg</p></div><div class="bg-primary-dark p-3 rounded-lg border border-zinc-700 text-center"><p class="text-xs text-zinc-400 uppercase">Total</p><p class="text-xl font-bold text-white">${data.length}</p></div>`;
+            
+            myChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: data.map(d => new Date(d.data_registro).toLocaleDateString('pt-BR')),
+                    datasets: [{ label: 'Carga', data: data.map(d => d.peso), borderColor: '#f97316', backgroundColor: 'rgba(249, 115, 22, 0.1)', fill: true, tension: 0.4 }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, plugins: {legend:{display:false}}, scales: { y:{grid:{color:'#27272a'}}, x:{display:false} } }
+            });
+        };
+
+        showView('auth');
+    </script>
+</body>
+</html>
